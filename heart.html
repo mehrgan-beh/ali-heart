@@ -1,0 +1,219 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Heart for ALI ❤️</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: radial-gradient(circle, #240d35, #05020b);
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+}
+
+canvas {
+  width: 100vw;
+  height: 100vh;
+  display: block;
+}
+
+#start {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 15px 28px;
+  border: 1px solid hotpink;
+  border-radius: 30px;
+  background: #8b176e;
+  color: white;
+  font-size: 17px;
+  cursor: pointer;
+  box-shadow: 0 0 25px hotpink;
+  z-index: 2;
+}
+
+#hint {
+  position: fixed;
+  bottom: 15px;
+  width: 100%;
+  text-align: center;
+  color: pink;
+  letter-spacing: 4px;
+  font-size: 11px;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+
+<button id="start">❤️ START ❤️</button>
+
+<audio id="music" src="song.mp3" loop></audio>
+
+<div id="hint">MADE WITH LOVE</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const music = document.getElementById("music");
+const button = document.getElementById("start");
+
+let W, H, startTime;
+let running = false;
+
+const colors = [
+  "red", "magenta", "purple",
+  "blue", "cyan", "lime",
+  "yellow", "orange", "pink"
+];
+
+const stars = Array.from({length: 70}, () => ({
+  x: Math.random(),
+  y: Math.random(),
+  r: Math.random() * 2 + 1,
+  phase: Math.random() * 6
+}));
+
+function resize() {
+  W = canvas.width = innerWidth;
+  H = canvas.height = innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+function heart(t, scale) {
+  let x = 16 * Math.sin(t) ** 3;
+  let y = 13 * Math.cos(t)
+        - 5 * Math.cos(2*t)
+        - 2 * Math.cos(3*t)
+        - Math.cos(4*t);
+
+  return {
+    x: W/2 + x*scale,
+    y: H*.57 - y*scale
+  };
+}
+
+function drawStars(time) {
+  stars.forEach(s => {
+    let alpha = .4 + .6 * Math.sin(time*.003 + s.phase)**2;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "white";
+    ctx.shadowColor = "hotpink";
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawName(elapsed) {
+  if (elapsed < 300) return;
+
+  let count = Math.min(3, Math.floor((elapsed-300)/700)+1);
+  let name = ["A", "L", "I"].slice(0,count).join("   ");
+
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.font = "bold 45px Arial";
+  ctx.fillStyle = "white";
+  ctx.shadowColor = "magenta";
+  ctx.shadowBlur = 25;
+  ctx.fillText(name, W/2, H*.17);
+  ctx.restore();
+}
+
+function animate(now) {
+  if (!running) return;
+
+  let elapsed = now - startTime;
+
+  ctx.clearRect(0,0,W,H);
+
+  drawStars(now);
+  drawName(elapsed);
+
+  let scale = Math.min(W/43, H/40, 15);
+  let bottom = {
+    x: W/2,
+    y: H*.57 + 17*scale
+  };
+
+  // Draw 180 rainbow lines one by one
+  for (let i=0; i<180; i++) {
+    let delay = i*35;
+    let progress = Math.max(0, Math.min(1, (elapsed-delay)/900));
+
+    if (progress <= 0) continue;
+
+    let angle = 2*Math.PI*i/180;
+    let p = heart(angle, scale);
+
+    let x = bottom.x + (p.x-bottom.x)*progress;
+    let y = bottom.y + (p.y-bottom.y)*progress;
+
+    ctx.beginPath();
+    ctx.moveTo(bottom.x,bottom.y);
+    ctx.lineTo(x,y);
+
+    ctx.strokeStyle = colors[i % colors.length];
+    ctx.lineWidth = 2;
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Glowing heart outline
+  if (elapsed > 7500) {
+    ctx.beginPath();
+
+    for (let i=0; i<=360; i++) {
+      let p = heart(i*Math.PI*2/360,scale);
+      if (i===0) ctx.moveTo(p.x,p.y);
+      else ctx.lineTo(p.x,p.y);
+    }
+
+    ctx.closePath();
+    ctx.strokeStyle = "hotpink";
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "magenta";
+    ctx.shadowBlur = 20;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  requestAnimationFrame(animate);
+}
+
+button.addEventListener("click", async () => {
+  if (running) return;
+
+  try {
+    music.currentTime = 54;
+    await music.play();
+  } catch (e) {
+    alert("Make sure song.mp3 is in the same folder as this HTML file.");
+  }
+
+  running = true;
+  startTime = performance.now();
+  button.style.display = "none";
+
+  requestAnimationFrame(animate);
+});
+</script>
+
+</body>
+</html>
